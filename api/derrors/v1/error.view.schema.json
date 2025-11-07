@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dirpx.dev/api/derrors/v1/error.view.schema.json",
+  "title": "ErrorView",
+  "description": "Lightweight public error shape returned by dirpx HTTP endpoints.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code"],
+  "properties": {
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Logical/business error code, e.g. \"unavailable\" or \"invalid\"."
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable, client-safe message describing the error."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Optional dotted, fine-grained reason for diagnostics, e.g. \"storage.pg.connect_timeout\"."
+    },
+    "correlation": {
+      "type": "string",
+      "description": "Optional correlation or idempotency token that the client can echo back."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Optional distributed trace identifier, if available."
+    },
+    "span_id": {
+      "type": "string",
+      "description": "Optional span identifier within the distributed trace."
+    },
+    "retry_after_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional hint for clients: wait at least this many seconds before retrying."
+    },
+    "links": {
+      "type": "array",
+      "description": "Optional human-facing links with extra context, documentation, or support.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rel", "href"],
+        "properties": {
+          "rel": {
+            "type": "string",
+            "description": "Relationship/type of the link, e.g. \"doc\", \"support\", \"more\"."
+          },
+          "href": {
+            "type": "string",
+            "format": "uri",
+            "description": "Absolute or service-relative URI to the resource."
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional human-readable title/caption for the link."
+          }
+        }
+      }
+    },
+    "fields": {
+      "description": "Validation violations for individual fields; usually present for 4xx errors.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "reason"],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Field path that failed validation, e.g. \"spec.replicas\"."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Machine-friendly reason code, e.g. \"required\" or \"must_be_greater_than_or_equal_to_1\"."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable description of the violation."
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "code": "invalid",
+      "message": "spec.replicas must be >= 1",
+      "reason": "deployment.validation.failed",
+      "fields": [
+        {
+          "field": "spec.replicas",
+          "reason": "must_be_greater_than_or_equal_to_1",
+          "message": "replicas must be >= 1"
+        }
+      ],
+      "correlation": "req-9f77d9e1",
+      "trace_id": "3f5c2d9f7b4e45f8",
+      "links": [
+        {
+          "rel": "doc",
+          "href": "https://dirpx.dev/docs/errors/invalid",
+          "title": "How to fix invalid input"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package derrors.v1;
+
+option go_package = "dirpx.dev/api/derrors/v1;derrorsv1";
+
+// Tag is a simple key/value pair for flat, text-only annotations.
+// This message intentionally supports only strings to keep it portable
+// across logs, traces, and message buses without extra encoding.
+message Tag {
+  string key = 1;   // Tag name, e.g. "component" or "owner".
+  string value = 2; // Tag value, e.g. "storage" or "team-a".
+}
+
+// Link describes a human-facing resource related to the error,
+// such as documentation, support, or terms.
+message Link {
+  string rel   = 1; // Relation/type of the link: "doc", "support", "more", "terms", etc.
+  string href  = 2; // Absolute or service-relative URL.
+  string title = 3; // Optional human-readable title/caption for UI.
+}
+
+// Violation captures a single input/validation error on a concrete field.
+// Suitable for 4xx responses where you want to show multiple problems at once.
+message Violation {
+  string field   = 1; // Path to the field, e.g. "spec.replicas".
+  string reason  = 2; // Machine-friendly reason code, e.g. "must_be_greater_than_or_equal_to_1".
+  string message = 3; // Human-readable explanation.
+}
+
+// QuotaInfo conveys current quota/limit state relevant to the error.
+// This helps clients decide whether to retry later or reduce usage.
+message QuotaInfo {
+  string resource      = 1; // Quota/limit name, e.g. "requests_per_minute".
+  int64  limit         = 2; // Total allowed in the window.
+  int64  remaining     = 3; // Remaining within the current window.
+  int64  reset_seconds = 4; // Seconds until the window resets.
+}
+
+// RetryInfo gives client-side guidance on whether and when to retry.
+message RetryInfo {
+  bool  retryable           = 1; // true if the server considers this error retryable.
+  int64 retry_after_seconds = 2; // If > 0, client should wait at least this long.
+  string policy             = 3; // Optional hint: "exponential", "fixed", etc.
+}
+
+// Cause is a minimal element of the error cause chain. It allows
+// the server to expose a shallow, safe description of underlying problems
+// without dumping full internal errors.
+message Cause {
+  string type    = 1; // Short identifier, e.g. "io_timeout", "sql_error".
+  string message = 2; // Brief description of the underlying cause.
+}
+
+// Environment describes the runtime environment in which the error occurred.
+// This is useful for multi-region, multi-service deployments and for
+// correlating errors across components.
+message Environment {
+  string service     = 1; // Logical service name.
+  string version     = 2; // Service version/release.
+  string region      = 3; // Region name, e.g. "us-central1".
+  string zone        = 4; // Zone/availability zone, e.g. "us-central1-b".
+  string instance    = 5; // Instance/pod/node identifier.
+  string environment = 6; // Deployment environment: "prod", "staging", etc.
+}
+
+// ErrorDescriptor is a portable, self-contained error envelope.
+// It is designed to be embedded into gRPC status details, logged, or
+// sent over a message bus.
+//
+// This is a stable external contract, not the internal derrors.Error.
+// All fields are intentionally simple so they can be handled by different
+// languages and transports.
+message ErrorDescriptor {
+  // Logical/business plane.
+  string code    = 1; // High-level error code, e.g. "unavailable", "invalid".
+  string reason  = 2; // Optional dotted, fine-grained reason, e.g. "storage.pg.connect_timeout".
+  string message = 3; // Short client-safe message (may match ErrorView.message).
+
+  // Transport projections.
+  int32 http_status = 10; // Resolved HTTP status, e.g. 503, 400.
+  int32 grpc_code   = 11; // Resolved gRPC status (as integer), e.g. 14 for UNAVAILABLE.
+
+  // Diagnostics and correlation.
+  string correlation_id = 20; // Client/server correlation or idempotency key.
+  string trace_id       = 21; // Distributed trace identifier, if available.
+  string span_id        = 22; // Span identifier within the trace.
+
+  // Client guidance.
+  RetryInfo retry = 30; // Retry/backoff hints.
+  QuotaInfo quota = 31; // Quota/limit state relevant to this error.
+
+  // Structured input/validation errors (typically for 4xx).
+  repeated Violation violations = 40;
+
+  // Human-facing navigation to docs/support/etc.
+  repeated Link links = 50;
+
+  // Shallow cause chain; deeper/internal errors should stay in logs/traces.
+  repeated Cause causes = 60;
+
+  // Deployment/runtime context in which the error was produced.
+  Environment env = 70;
+
+  // Flat annotations for extra safe-to-expose metadata.
+  repeated Tag tags = 80;
+}

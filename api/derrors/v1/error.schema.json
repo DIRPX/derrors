@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dirpx.dev/api/derrors/v1/error.schema.json",
+  "title": "ErrorDescriptor",
+  "description": "Portable, rich error descriptor for gRPC details, logs, or message buses.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code"],
+
+  "properties": {
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Business error code, e.g. \"unavailable\" or \"invalid\"."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Dotted, fine-grained reason identifier, e.g. \"storage.pg.connect_timeout\"."
+    },
+    "message": {
+      "type": "string",
+      "description": "Short, client-safe text description of the error."
+    },
+    "http_status": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 599,
+      "description": "Resolved HTTP status code corresponding to the error."
+    },
+    "grpc_code": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Resolved gRPC status code (numeric representation)."
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlation or idempotency identifier for this error instance."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Distributed trace identifier."
+    },
+    "span_id": {
+      "type": "string",
+      "description": "Span identifier within the trace."
+    },
+    "retry": {
+      "type": "object",
+      "description": "Hints for retry/backoff behavior on the client side.",
+      "additionalProperties": false,
+      "properties": {
+        "retryable": {
+          "type": "boolean",
+          "description": "True if the operation may succeed upon retry."
+        },
+        "retry_after_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "If present and > 0, the minimum time (seconds) to wait before retrying."
+        },
+        "policy": {
+          "type": "string",
+          "description": "Optional policy hint such as \"exponential\" or \"fixed\"."
+        }
+      }
+    },
+
+    "quota": {
+      "type": "object",
+      "description": "Quota or limit information associated with the error.",
+      "additionalProperties": false,
+      "properties": {
+        "resource": {
+          "type": "string",
+          "description": "Quota resource name, e.g. \"requests_per_minute\"."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum allowed amount for the current window."
+        },
+        "remaining": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Remaining quota in the current window."
+        },
+        "reset_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of seconds until the quota window resets."
+        }
+      }
+    },
+    "violations": {
+      "type": "array",
+      "description": "Input or validation violations (typically for 4xx errors).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "reason"],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Field path that failed validation, e.g. \"spec.replicas\"."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Machine-friendly reason code, e.g. \"required\" or \"must_be_positive\"."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable message describing the violation."
+          }
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "description": "Human-facing links providing documentation, support, or additional context.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rel", "href"],
+        "properties": {
+          "rel": {
+            "type": "string",
+            "description": "Relation type, e.g. \"doc\", \"support\", or \"more\"."
+          },
+          "href": {
+            "type": "string",
+            "format": "uri",
+            "description": "Absolute or service-relative URI."
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional human-readable link title."
+          }
+        }
+      }
+    },
+    "causes": {
+      "type": "array",
+      "description": "Shallow cause chain; deeper/internal stack remains in logs or traces.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Short identifier of the underlying issue, e.g. \"io_timeout\" or \"sql_error\"."
+          },
+          "message": {
+            "type": "string",
+            "description": "Brief description of the underlying cause."
+          }
+        }
+      }
+    },
+
+    "env": {
+      "type": "object",
+      "description": "Deployment or runtime environment where the error occurred.",
+      "additionalProperties": false,
+      "properties": {
+        "service": {
+          "type": "string",
+          "description": "Logical service name."
+        },
+        "version": {
+          "type": "string",
+          "description": "Service version or release identifier."
+        },
+        "region": {
+          "type": "string",
+          "description": "Deployment region, e.g. \"us-central1\"."
+        },
+        "zone": {
+          "type": "string",
+          "description": "Availability zone, e.g. \"us-central1-b\"."
+        },
+        "instance": {
+          "type": "string",
+          "description": "Instance or pod identifier."
+        },
+        "environment": {
+          "type": "string",
+          "description": "Deployment environment name, e.g. \"prod\", \"staging\"."
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Flat key/value annotations with string values only.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "value"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Annotation key."
+          },
+          "value": {
+            "type": "string",
+            "description": "Annotation value."
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "code": "unavailable",
+      "reason": "storage.pg.connect_timeout",
+      "message": "Database temporarily unavailable",
+      "http_status": 503,
+      "grpc_code": 14,
+      "correlation_id": "req-9f77d9e1",
+      "trace_id": "3f5c2d9f7b4e45f8",
+      "span_id": "79a1c3b2",
+      "retry": {
+        "retryable": true,
+        "retry_after_seconds": 5,
+        "policy": "exponential"
+      },
+      "links": [
+        {
+          "rel": "doc",
+          "href": "https://dirpx.dev/docs/errors/unavailable",
+          "title": "Outage and retry policy"
+        }
+      ],
+      "env": {
+        "service": "orders",
+        "version": "1.3.7",
+        "region": "us-east1",
+        "environment": "prod"
+      },
+      "tags": [
+        { "key": "component", "value": "pg" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package derrors.v1;
+
+option go_package = "dirpx.dev/api/derrors/v1;derrorsv1";
+
+// Reuse Link and Violation from the descriptor proto.
+import "derrors/v1/error.proto";
+
+// ErrorView is the lightweight public JSON payload for HTTP responses.
+// Field names + json_name ensure snake_case in protojson output to match error.view.schema.json.
+message ErrorView {
+  // Core
+  string code    = 1;  // required by schema
+  string message = 2;  // optional
+  string reason  = 3;  // optional
+
+  // Correlation & tracing (snake_case for JSON)
+  string correlation         = 10 [json_name = "correlation"];
+  string trace_id            = 11 [json_name = "trace_id"];
+  string span_id             = 12 [json_name = "span_id"];
+
+  // Retry hint (seconds); corresponds to schema's retry_after_seconds
+  int32 retry_after_seconds  = 20 [json_name = "retry_after_seconds"];
+
+  // Human-facing links (docs/support/etc.)
+  repeated Link links        = 30;
+
+  // Validation violations (aka "fields" in the schema)
+  repeated Violation fields  = 40;
+}
